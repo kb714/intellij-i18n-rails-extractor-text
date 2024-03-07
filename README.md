@@ -13,7 +13,7 @@ Rails I18n Extractor is a RubyMine plugin designed to assist in the internationa
 
 To install the Rails I18n Extractor plugin in RubyMine:
 
-1. Download the plugin `.jar` or `.zip` file.
+1. Download the plugin `.jar` file.
 2. Open RubyMine and navigate to `Preferences` > `Plugins`.
 3. Click on the gear icon and select `Install Plugin from Disk...`.
 4. Choose the downloaded file and restart RubyMine.
