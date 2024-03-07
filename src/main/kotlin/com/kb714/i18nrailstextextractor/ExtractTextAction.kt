@@ -1,4 +1,4 @@
-package com.kb714.i18nrailsextractortext
+package com.kb714.i18nrailstextextractor
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent

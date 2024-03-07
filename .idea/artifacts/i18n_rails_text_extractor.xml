@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="i18n-rails-text-extractor">
+    <output-path>$PROJECT_DIR$/out/artifacts/i18n_rails_text_extractor</output-path>
+    <root id="archive" name="i18n-rails-text-extractor.jar">
+      <element id="dir-copy" path="$PROJECT_DIR$/src/main/resources" />
+      <element id="module-output" name="i18n-rails-extractor-text.main" />
+    </root>
+  </artifact>
+</component>
