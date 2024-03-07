@@ -5,15 +5,15 @@ plugins {
 }
 
 group = "com.kb714"
-version = "1.0-SNAPSHOT"
+version = "1.1"
 
 repositories {
     mavenCentral()
 }
 
-//dependencies {
-  //  implementation("org.yaml:snakeyaml:2.2")
-//}
+dependencies {
+    implementation("org.yaml:snakeyaml:2.2")
+}
 
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html

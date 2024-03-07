@@ -1,4 +1,4 @@
-package com.kb714.i18nrailsextractortext.processors
+package com.kb714.i18nrailstextextractor.processors
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
@@ -26,7 +26,7 @@ interface FileProcessor {
             document.replaceString(start, end, replacementText)
         }
 
-        // clear
+        // no estoy seguro de que esto sea necesario
         selectionModel.removeSelection()
     }
 
@@ -69,6 +69,9 @@ interface FileProcessor {
 
         val yaml = Yaml(options)
         val file = File(yamlPath)
+        // si el directorio o archivos no existen, los creamos
+        file.parentFile.mkdirs()
+        file.createNewFile()
         // configurar :z
         val fullPath = "es.$key"
         val decomposedKey = decomposeKey(fullPath)
@@ -118,5 +121,69 @@ interface FileProcessor {
                 .replace('/', '.')
 
         return translationPath
+    }
+
+    fun buildI18nCall(i18nKey: String, variablesMap: Map<String, String>): String {
+        val i18nArguments = variablesMap.entries.joinToString(separator = ", ") { (slug, originalExpression) ->
+            if (originalExpression.contains('.')) {
+                // Para expresiones de clase, mantenemos la expresión original como valor
+                "$slug: $originalExpression"
+            } else {
+                // Para variables lo dejamos igual
+                "$slug: $slug"
+            }
+        }
+
+        // configurable?
+        val replacementText = if (variablesMap.isNotEmpty()) {
+            "I18n.t('$i18nKey', $i18nArguments)"
+        } else {
+            "I18n.t('$i18nKey')"
+        }
+
+        return replacementText
+    }
+
+    fun removeSurroundingQuotes(value: String): String {
+        // Verifica si el valor está rodeado por comillas simples o dobles y las quita
+        // en teoria el procesador de yml las agrega (snakeyaml)
+        return if ((value.startsWith("\"") && value.endsWith("\"")) ||
+                (value.startsWith("'") && value.endsWith("'"))) {
+            value.substring(1, value.length - 1)
+        } else {
+            value
+        }
+    }
+
+    fun transformTextForI18nOnRuby(originalText: String): Pair<String, Map<String, String>> {
+        val variablesMap = mutableMapOf<String, String>()
+
+        val interpolationPattern = """#\{([^\}]+)\}""".toRegex()
+        val transformedText = interpolationPattern.replace(originalText) { matchResult ->
+            val fullExpression = matchResult.groupValues[1].trim()
+
+            // Determina si la expresión es una variable simple o algo más complejo
+            val isSimpleVariable = fullExpression.all { it.isLetterOrDigit() || it == '_' }
+
+            val slug = if (isSimpleVariable) {
+                fullExpression
+            } else {
+                // Para expresiones complejas limpiamos cualqueir caracter raro
+                val cleanedExpression = fullExpression
+                        .replace(Regex("""\([^\)]*\)"""), "")
+                        .replace(Regex("""\[[^\]]*\]"""), "")
+
+                cleanedExpression
+                        .replace(Regex("[^a-zA-Z0-9_]"), "_")
+                        .lowercase()
+            }
+            // nos aseguramos de que no parta ni terine con _, ni que tenga mas de un _ seguido
+            val processedSlug = slug.replace(Regex("_+"), "_").trim('_')
+
+            variablesMap[processedSlug] = fullExpression
+            "%{$processedSlug}"
+        }
+
+        return Pair(transformedText, variablesMap)
     }
 }
