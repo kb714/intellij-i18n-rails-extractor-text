@@ -94,18 +94,19 @@ interface FileProcessor {
     }
 
     fun updateYamlContent(currentContent: MutableMap<String, Any>, keyParts: List<String>, value: String) {
-        var currentLevel = currentContent
+        var currentLevel: MutableMap<String, Any> = currentContent
 
         for (i in 0 until keyParts.size - 1) {
             val part = keyParts[i]
-            if (!currentLevel.containsKey(part)) {
-                currentLevel[part] = mutableMapOf<String, Any>()
-            }
-            currentLevel = currentLevel[part] as MutableMap<String, Any>
+            // Asegura que cada parte intermedia sea un MutableMap. Si no existe, se crea uno nuevo.
+            @Suppress("UNCHECKED_CAST")
+            currentLevel = currentLevel.computeIfAbsent(part) { mutableMapOf<String, Any>() } as MutableMap<String, Any>
         }
 
+        // Asigna el valor al último keyPart en el nivel adecuado.
         currentLevel[keyParts.last()] = value
     }
+
 
     fun buildI18nPath(filePath: String, projectRoot: String): String {
         // Elimina el prefijo del proyecto y cualquier parte de la ruta antes de "/app/"
@@ -158,30 +159,31 @@ interface FileProcessor {
     fun transformTextForI18nOnRuby(originalText: String): Pair<String, Map<String, String>> {
         val variablesMap = mutableMapOf<String, String>()
 
-        val interpolationPattern = """#\{([^\}]+)\}""".toRegex()
+        val interpolationPattern = """#\{([^}]+)}""".toRegex()
         val transformedText = interpolationPattern.replace(originalText) { matchResult ->
             val fullExpression = matchResult.groupValues[1].trim()
 
             // Determina si la expresión es una variable simple o algo más complejo
             val isSimpleVariable = fullExpression.all { it.isLetterOrDigit() || it == '_' }
+                    && !fullExpression.contains(" ")
 
             val slug = if (isSimpleVariable) {
                 fullExpression
             } else {
                 // Para expresiones complejas limpiamos cualqueir caracter raro
-                val cleanedExpression = fullExpression
-                        .replace(Regex("""\([^\)]*\)"""), "")
-                        .replace(Regex("""\[[^\]]*\]"""), "")
+                fullExpression
+                    .replace(Regex("""\([^)]*\)"""), "")
+                    .replace(Regex("""\[[^]]*]"""), "")
+                    .replace(Regex("[^a-zA-Z0-9_]"), "_")
+                    .replace(Regex("_+"), "_") // limitamos a 1 por si hay cosas como Foo::Bar
+                    .trim('_')
+                    .lowercase()
 
-                cleanedExpression
-                        .replace(Regex("[^a-zA-Z0-9_]"), "_")
-                        .lowercase()
+
             }
-            // nos aseguramos de que no parta ni terine con _, ni que tenga mas de un _ seguido
-            val processedSlug = slug.replace(Regex("_+"), "_").trim('_')
 
-            variablesMap[processedSlug] = fullExpression
-            "%{$processedSlug}"
+            variablesMap[slug] = fullExpression
+            "%{$slug}"
         }
 
         return Pair(transformedText, variablesMap)
