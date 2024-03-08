@@ -84,30 +84,33 @@ class ErbFileProcessor : FileProcessor {
         return lastOpeningTagIndex > lastClosingTagIndex
     }
 
+    // este método es casi igual al de rb, pero lo dejo por separado por si tenemos que
+    // procesar cosas propias de uno u otro
     fun transformTextForI18nOnHTML(originalText: String): Pair<String, MutableMap<String, String>> {
-        var transformedText = originalText
         val variablesMap = mutableMapOf<String, String>()
 
-        // Para variables normales tipo <%= variable %>
-        val rubyVariablePattern = Regex("<%=?\\s*([a-zA-Z_][\\w.]*)\\s*%>")
-        transformedText = rubyVariablePattern.replace(transformedText) { matchResult ->
-            val variableName = matchResult.groupValues[1]
-            if (!variablesMap.containsKey(variableName)) {
-                variablesMap[variableName] = variableName
-            }
-            "%{${variableName}}"
-        }
+        // capturamos variables que vivan entre <%= %> y <% %>
+        val interpolationPattern = """<%=?\s*([^%]+?)\s*%>""".toRegex()
+        val transformedText = interpolationPattern.replace(originalText) { matchResult ->
+            val fullExpression = matchResult.groupValues[1].trim()
 
-        // Para clases tipo <%= Foo.human_attribute_name(:bar) %>
-        val classMethodPattern = Regex("(?:<%=\\s*|\\#\\{)([A-Z][\\w:]*\\w+)\\.([a-zA-Z_]+)\\(([^\\}]*)\\)(?:\\s*%>|\\})")
-        transformedText = classMethodPattern.replace(transformedText) { matchResult ->
-            val classPath = matchResult.groupValues[1]
-            val methodName = matchResult.groupValues[2]
-            val methodArgs = matchResult.groupValues[3]
-            val classPathSlug = classPath.replace("::", "_").lowercase()
-            val slug = "${classPathSlug}_$methodName"
-            val originalExpression = if (methodArgs.isNotBlank()) "$classPath.$methodName($methodArgs)" else "$classPath.$methodName()"
-            variablesMap[slug] = originalExpression
+            // Determina si la expresión es una variable simple o algo más complejo
+            val isSimpleVariable = fullExpression.all { it.isLetterOrDigit() || it == '_' }
+                    && !fullExpression.contains(" ")
+
+            val slug = if (isSimpleVariable) {
+                fullExpression
+            } else {
+                fullExpression
+                    .replace(Regex("""\([^)]*\)"""), "")
+                    .replace(Regex("""\[[^]]*]"""), "")
+                    .replace(Regex("[^a-zA-Z0-9_]"), "_")
+                    .replace(Regex("_+"), "_")
+                    .trim('_')
+                    .lowercase()
+            }
+
+            variablesMap[slug] = fullExpression
             "%{$slug}"
         }
 

@@ -17,6 +17,17 @@ class RbFileProcessorTest : BasePlatformTestCase() {
         TestCase.assertEquals(expectedText, transformedText)
     }
 
+    fun `test should extract repeat variables`(){
+        val text = "text with #{foo} #{foo}"
+        val (transformedText, variables) = rbProcessor.transformTextForI18nOnRuby(text)
+
+        val expectedMap = mapOf("foo" to "foo")
+        val expectedText = "text with %{foo} %{foo}"
+
+        TestCase.assertEquals(expectedMap, variables)
+        TestCase.assertEquals(expectedText, transformedText)
+    }
+
     fun `test should extract class and methods`(){
         val text = "text with #{Foo.method(:attribute)} or #{Foo::Bar.method(:attribute)}"
         val (transformedText, variables) = rbProcessor.transformTextForI18nOnRuby(text)
@@ -42,6 +53,20 @@ class RbFileProcessorTest : BasePlatformTestCase() {
                 "foo_bar_method" to "Foo::Bar.method[:attribute]",
         )
         val expectedText = "%{variable} %{foo_method} or %{foo_bar_method} %{other_variable}"
+
+        TestCase.assertEquals(expectedMap, variables)
+        TestCase.assertEquals(expectedText, transformedText)
+    }
+
+    fun `test should extract weird things`(){
+        val text = "text with #{variable} and #{foo == :bar ? 'lorem' : 'ipsum'}"
+        val (transformedText, variables) = rbProcessor.transformTextForI18nOnRuby(text)
+
+        val expectedMap = mapOf(
+                "variable" to "variable",
+                "foo_bar_lorem_ipsum" to "foo == :bar ? 'lorem' : 'ipsum'"
+        )
+        val expectedText = "text with %{variable} and %{foo_bar_lorem_ipsum}"
 
         TestCase.assertEquals(expectedMap, variables)
         TestCase.assertEquals(expectedText, transformedText)
