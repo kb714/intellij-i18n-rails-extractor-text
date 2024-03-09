@@ -2,10 +2,11 @@ package com.kb714.i18nrailstextextractor.processors
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.InputValidator
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
+import com.kb714.i18nrailstextextractor.utils.I18nFinder
+import com.kb714.i18nrailstextextractor.utils.UserInteraction
 
 class ErbFileProcessor : FileProcessor {
 
@@ -20,46 +21,42 @@ class ErbFileProcessor : FileProcessor {
             return
         }
 
-        // de alguna forma hay que generar esto automaticamente en caso de nulo
-        // o validar que siempre se ingrese algo
-        val userInput = Messages.showInputDialog(
-                "Ingresa la clave del texto a Extraer",
-                "Información",
-                Messages.getQuestionIcon(),
-                "",
-                object : InputValidator {
-                    override fun checkInput(inputString: String?): Boolean {
-                        return !inputString.isNullOrEmpty()
-                    }
-                    override fun canClose(inputString: String?): Boolean {
-                        return checkInput(inputString)
-                    }
-                })
-
-        val translationPath = buildI18nPath(filePath, projectRoot)
         val yamlPath = buildYamlPath(filePath, projectRoot)
-        val i18nKey = "$translationPath.$userInput"
-        val textToYaml: String
-
         val isWithinERBTags = isWithinERBTags(editor)
+        val (textToYaml, variablesMap) = transformTextForI18n(selectedText, isWithinERBTags)
+        val existingKey = I18nFinder.keyForText(textToYaml)
 
-        val replacementText = if (isWithinERBTags) {
-            // ruby
-            val (transformedText, variablesMap) = transformTextForI18nOnRuby(selectedText)
-            textToYaml = removeSurroundingQuotes(transformedText)
-            val buildText = buildI18nCall(i18nKey, variablesMap)
-            buildText
+        val i18nKey = if (existingKey.isNullOrEmpty()) {
+            val translationPath = buildI18nPath(filePath, projectRoot)
+            val userInput = UserInteraction.askForInput() ?: return
+            "$translationPath.$userInput"
         } else {
-            // html? erb
-            val (transformedText, variablesMap) = transformTextForI18nOnHTML(selectedText)
-            textToYaml = transformedText
-            val buildText = buildI18nCall(i18nKey, variablesMap)
-            "<%= $buildText %>"
+            existingKey
         }
 
+        val textToFile = if (isWithinERBTags) {
+            buildI18nCall(i18nKey, variablesMap)
+        } else {
+            val replacementText = buildI18nCall(i18nKey, variablesMap)
+            "<%= $replacementText %>"
+        }
 
-        updateOrCreateYaml(yamlPath, i18nKey, textToYaml)
-        replaceSelectedText(editor, project, replacementText)
+        if (existingKey.isNullOrEmpty()) {
+            updateOrCreateYaml(yamlPath, i18nKey, textToYaml)
+            replaceSelectedText(editor, project, textToFile)
+        } else {
+            replaceSelectedText(editor, project, textToFile)
+        }
+    }
+
+    private fun transformTextForI18n(selectedText: String, isWithinERBTags: Boolean): Pair<String, Map<String, String>> {
+        if (isWithinERBTags) {
+            val (transformedText, variablesMap) = transformTextForI18nOnRuby(selectedText)
+            val cleanedText = removeSurroundingQuotes(transformedText)
+            return Pair(cleanedText, variablesMap)
+        } else {
+            return transformTextForI18nOnHTML(selectedText)
+        }
     }
 
     private fun isWithinERBTags(editor: Editor): Boolean {
