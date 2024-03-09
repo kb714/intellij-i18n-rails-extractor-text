@@ -1,18 +1,8 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
     <id>com.kb714.i18n-rails-text-extractor</id>
-
-    <!-- Public plugin name should be written in Title Case.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
     <name>I18n Rails Text Extractor</name>
-
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor email="aaguirre@kb714.com" url="https://https://github.com/kb714/intellij-i18n-rails-text-extractor">Github</vendor>
-
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
     Rails I18n Extractor is a RubyMine plugin designed to assist in the internationalization of Ruby on Rails projects.
     It enables developers to manually select hardcoded strings within their project and replace them with I18n translation keys,
@@ -20,19 +10,19 @@
     corresponding entries in locale YAML files.
   ]]></description>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
-
-    <!-- Extension points defined by the plugin.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <projectConfigurable instance="com.kb714.i18nrailstextextractor.PluginConfiguration" displayName="Extractor Settings"/>
-    </extensions>
+        <projectConfigurable instance="com.kb714.i18nrailstextextractor.PluginConfiguration"
+                             displayName="Extractor Settings"/>
 
+        <toolWindow factoryClass="com.kb714.i18nrailstextextractor.ui.FileInformationFactory"
+                    icon="AllIcons.General.Web"
+                    id="I18n File Information"
+                    anchor="right"/>
+    </extensions>
     <actions>
-        <!-- Agrega tus acciones aquí -->
-        <action id="RailsI18nExtractor.ExtractTextAction" class="com.kb714.i18nrailstextextractor.ExtractTextAction"
+        <action id="RailsI18nExtractor.ExtractTextAction"
+                class="com.kb714.i18nrailstextextractor.ExtractTextAction"
                 text="Extract"
                 description="Reemplaza texto seleccionado por I18n.t">
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
